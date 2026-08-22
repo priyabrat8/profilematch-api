@@ -1,7 +1,8 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException, Request
 from fastapi.responses import JSONResponse
 import shutil
-import os 
+import os
+import uuid
 
 from app.pipeline import process_resume
 from app.search import search_candidates
@@ -57,21 +58,25 @@ async def upload_resume(file: UploadFile = File(...)):
 	if len(content) > MAX_FILE_SIZE:
 		raise HTTPException(status_code=400, detail="File too large (max 5MB)")
 
-	file_path = os.path.join(UPLOAD_DIR,file.filename)
-	with open(file_path,"wb") as buffer:
+	safe_filename = f"{uuid.uuid4().hex}.pdf"
+	file_path = os.path.join(UPLOAD_DIR, safe_filename)
+	with open(file_path, "wb") as buffer:
 		buffer.write(content)
 
 	try:
 		candidate_id = process_resume(file_path)
 	except Exception as e:
-		raise HTTPException(status_code=500,detail=str(e))
+		raise HTTPException(status_code=500, detail=str(e))
+	finally:
+		if os.path.exists(file_path):
+			os.remove(file_path)
 
 	return {"message": "Resume processed successfully", "candidate_id": candidate_id}
 
 @app.get("/search")
-async def search(query: str, top_k: int=5):
+async def search(query: str, top_k: int = 5, max_distance: float = 0.4):
 	try:
-		result = search_candidates(query, top_k=top_k)
+		result = search_candidates(query, top_k=top_k, max_distance=max_distance)
 	except Exception as e:
 		raise HTTPException(status_code=500, detail=str(e))
 

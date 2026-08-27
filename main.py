@@ -74,10 +74,8 @@ async def upload_resume(file: UploadFile = File(...)):
 	return {"message": "Resume processed successfully", "candidate_id": candidate_id}
 
 @app.get("/search")
-async def search(query: str, top_k: int = 5, max_distance: float = 0.4):
-	try:
-		result = search_candidates(query, top_k=top_k, max_distance=max_distance)
-	except Exception as e:
-		raise HTTPException(status_code=500, detail=str(e))
-
-	return result
+async def search(query: str, top_k: int = 5):
+    try:
+        return search_candidates(query, top_k=top_k)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
